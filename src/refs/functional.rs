@@ -32,6 +32,10 @@ impl <T: Clone> GiftRef<T> for Ref<T> {
         self._ptr = source._ptr.clone()
     }
 
+    fn alias<'a,'b>(&mut self, x: &'a mut Self, y: &'b mut Self) {
+        panic!("alias not impl!")
+    }
+
     fn mutable<'a>(&'a mut self) -> Self::Mut {
         // We clone the element when dereferencing mutably. We also update the
         // current reference (self) to refer to the new version in order for the

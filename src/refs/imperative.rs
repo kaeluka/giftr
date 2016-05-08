@@ -55,6 +55,10 @@ impl <T> GiftRef<T> for Ref<T> where T: Clone {
         }
     }
 
+    fn alias<'a,'b>(&mut self, x: &'a mut Self, y: &'b mut Self) {
+        panic!("alias not impl!")
+    }
+
     fn mutable(&mut self) -> Self::Mut {
         Ref { _ptr: self._ptr.clone() }
     }

@@ -8,6 +8,7 @@ pub trait GiftRef<T: Clone> : Deref<Target=T> + DerefMut + Clone {
     fn null() -> Self;
     fn new(T) -> Self;
     fn cp(&mut self, &Self);
+    fn alias<'a,'b>(&mut self, &'a mut Self, &'b mut Self);
     fn mutable(&mut self) -> Self::Mut;
     fn rd(&self) -> &T;
 }
