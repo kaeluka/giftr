@@ -1,0 +1,9 @@
+[package]
+name = "giftr"
+version = "0.1.0"
+authors = ["Stephan Brandauer <stephan.brandauer@it.uu.se>"]
+
+[lib]
+name = "giftr"
+
+[dependencies]
