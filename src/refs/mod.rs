@@ -31,3 +31,48 @@ pub fn _copy<T: Clone, R : GiftRef<Option<T>>>(r: &mut R) -> R {
 pub mod imperative;
 
 pub mod functional;
+
+mod imp_tests {
+    use refs::{GiftRef, GiftMutRef};
+    use refs::functional::*;
+
+    fn print_x(x: i32) {
+        println!("x={}", x)
+    }
+
+    #[test]
+    pub fn rd() {
+        println!("==============================");
+        let r = Ref::new(12);
+        print_x(*r);
+        assert!(*r == 12);
+    }
+
+    #[test]
+    pub fn mutate() {
+        let mut x = Ref::new(12);
+        print_x(*x);
+        *x += 1;
+        assert!(*x == 13);
+    }
+
+    #[test]
+    pub fn copy() {
+        let mut r1 : Ref<i32> = Ref::new(12);
+        let     r2 : Ref<i32> = Ref::new(24);
+        assert!(*r1 == 12);
+        assert!(*r2 == 24);
+
+        r1.cp(&r2);
+
+        assert!(*r1 == 24);
+        assert!(*r2 == 24);
+
+        *r1+=1;
+
+        println!("r1={}", *r1);
+        println!("r2={}", *r2);
+        assert!(*r1 == 25);
+        assert!(*r2 == 24); //
+    }
+}

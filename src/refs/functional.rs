@@ -56,7 +56,7 @@ impl <T: Clone> GiftRef<T> for Ref<T> {
                 let ptr : *const T = &*r.borrow();
                 unsafe { &*ptr }
             }
-            None        => panic!("aaa")
+            None        => panic!("null pointer dereference")
         }
     }
 }
