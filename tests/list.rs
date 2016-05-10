@@ -107,7 +107,8 @@ fn lst_copy() {
     lst1.add(1);
     let mut lst2 : Ref<List<i32>> = Ref::null();
     lst1.add(2);
-    lst2.cp(&lst1);
+
+    lst2 = lst1.clone();
 
     lst1.add(3);
 
@@ -124,4 +125,3 @@ fn lst_replace_first() {
     lst.add(-1);
     lst.replace_first(1);
 }
-
