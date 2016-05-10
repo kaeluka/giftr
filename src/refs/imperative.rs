@@ -25,6 +25,7 @@ impl <T> Ref<T> {
 }
 
 impl <T: Clone> Clone for Ref<T> {
+    #[inline]
     fn clone(&self) -> Self {
         let mut ret : Ref<T> = Ref::null();
         ret.cp(self);
@@ -36,10 +37,12 @@ impl <T> GiftRef<T> for Ref<T> where T: Clone {
 
     type Mut = Ref<T>;
 
+    #[inline]
     fn null() -> Self {
         Ref { _ptr: None }
     }
 
+    #[inline]
     fn new(t: T) -> Self {
         Ref { _ptr: Some(Rc::new(RefCell::new(t))) }
     }
@@ -55,10 +58,11 @@ impl <T> GiftRef<T> for Ref<T> where T: Clone {
         }
     }
 
-    fn alias<'a,'b>(&mut self, x: &'a mut Self, y: &'b mut Self) {
+    fn alias<'a,'b>(&mut self, _x: &'a mut Self, _y: &'b mut Self) {
         panic!("alias not impl!")
     }
 
+    #[inline]
     fn mutable(&mut self) -> Self::Mut {
         Ref { _ptr: self._ptr.clone() }
     }
@@ -76,6 +80,7 @@ impl <T> GiftRef<T> for Ref<T> where T: Clone {
 
 impl <T:Clone> Deref for Ref<T> {
     type Target = T;
+    #[inline]
     fn deref(&self) -> &Self::Target {
         self.rd()
     }
@@ -94,6 +99,7 @@ impl <'a, T> GiftMutRef<T> for Ref<T> {
 }
 
 impl <T: Clone> DerefMut for Ref<T> {
+    #[inline]
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.rd_mut()
     }

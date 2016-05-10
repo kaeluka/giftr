@@ -1,5 +1,3 @@
-use std::ptr::copy_nonoverlapping;
-use std::mem::{drop, zeroed};
 
 //pub trait ShallowClone {
 //    fn shallow_clone(&self) -> Self;

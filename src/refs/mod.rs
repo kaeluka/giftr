@@ -17,16 +17,19 @@ pub trait GiftMutRef<T> {
     fn rd(&mut self) -> &mut T;
 }
 
+#[inline]
 pub fn _replace<T: Clone, R : GiftRef<T>>(r: &mut R, x:T) -> R {
     replace(r, R::new(x))
 }
 
-pub fn _move<T: Clone, R : GiftRef<Option<T>>>(r: &mut R) -> R {
-    _replace(r, None)
+#[inline]
+pub fn _move<T: Default+Clone, R : GiftRef<T>>(r: &mut R) -> R {
+    _replace(r, Default::default())
 }
 
-pub fn _copy<T: Clone, R : GiftRef<Option<T>>>(r: &mut R) -> R {
-    panic!("not implemented")
+#[inline]
+pub fn _copy<T: Default+Clone, R : GiftRef<T>>(r: &R) -> R {
+    r.clone()
 }
 
 pub mod imperative;
@@ -34,8 +37,8 @@ pub mod imperative;
 pub mod functional;
 
 mod imp_tests {
-    use refs::{GiftRef, GiftMutRef};
-    use refs::functional::*;
+    use refs::GiftRef;
+    use refs::imperative::Ref;
 
     fn print_x(x: i32) {
         println!("x={}", x)

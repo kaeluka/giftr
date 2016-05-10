@@ -4,7 +4,6 @@ use refs::GiftMutRef;
 use std::ops::{Deref,DerefMut};
 use std::cell::RefCell;
 use std::rc::Rc;
-use refs::mem::*; //{brutal_shallow_clone, ShallowClone};
 
 #[derive(Debug)]
 pub struct Ref<T> {
@@ -19,20 +18,23 @@ impl <T: Clone> GiftRef<T> for Ref<T> {
 
     type Mut = MutRef<T>;
 
+    #[inline]
     fn null() -> Self {
         Ref { _ptr: None }
     }
 
+    #[inline]
     fn new(t:T) -> Self {
         Ref { _ptr: Some(Rc::new(RefCell::new(t))) }
     }
 
+    #[inline]
     fn cp(&mut self, source : &Self) {
         //copying is just creating an alias:
         self._ptr = source._ptr.clone()
     }
 
-    fn alias<'a,'b>(&mut self, x: &'a mut Self, y: &'b mut Self) {
+    fn alias<'a,'b>(&mut self, _x: &'a mut Self, _y: &'b mut Self) {
         panic!("alias not impl!")
     }
 
@@ -66,6 +68,7 @@ impl <T: Clone> GiftRef<T> for Ref<T> {
 }
 
 impl <T: Clone> Clone for Ref<T> {
+    #[inline]
     fn clone(&self) -> Self {
         let mut ret : Ref<T> = Ref::null();
         ret.cp(self);
@@ -93,4 +96,3 @@ impl <T> GiftMutRef<T> for MutRef<T> {
         unsafe { &mut *ptr }
     }
 }
-
