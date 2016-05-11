@@ -65,6 +65,18 @@ impl <T: Clone> GiftRef<T> for Ref<T> {
             None        => panic!("null pointer dereference")
         }
     }
+
+    fn into_inner(self) -> T {
+        match self {
+            Ref { _ptr: Some(rc) } => {
+                match Rc::try_unwrap(rc) {
+                    Ok(refcell) => refcell.into_inner(),
+                    Err(rc)     => rc.borrow().clone(),
+                }
+            }
+            Ref { _ptr: None} => panic!("bug"),
+        }
+    }
 }
 
 impl <T: Clone> Clone for Ref<T> {

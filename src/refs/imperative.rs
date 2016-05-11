@@ -76,6 +76,21 @@ impl <T> GiftRef<T> for Ref<T> where T: Clone {
             None    => panic!("reading null pointer")
         }
     }
+
+    fn into_inner(self) -> T {
+        match self {
+            Ref { _ptr: Some(rc) } => {
+                match Rc::try_unwrap(rc) {
+                    Ok(refcell) => refcell.into_inner(),
+                    Err(rc)     => {
+                        panic!("bug: this pointer should be unique")
+                    }
+                }
+            },
+            Ref { _ptr: None    } => panic!("bug")
+        }
+    }
+
 }
 
 impl <T:Clone> Deref for Ref<T> {

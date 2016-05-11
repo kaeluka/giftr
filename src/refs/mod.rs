@@ -11,6 +11,7 @@ pub trait GiftRef<T: Clone> : Deref<Target=T> + DerefMut + Clone {
     fn alias<'a,'b>(&mut self, &'a mut Self, &'b mut Self);
     fn mutable(&mut self) -> Self::Mut;
     fn rd(&self) -> &T;
+    fn into_inner(self) -> T;
 }
 
 pub trait GiftMutRef<T> {
@@ -22,6 +23,22 @@ pub fn _replace<T: Clone, R : GiftRef<T>>(r: &mut R, x:T) -> R {
     replace(r, R::new(x))
 }
 
+#[inline]
+pub fn _move_opt<T>(o: &mut Option<T>) -> Option<T> {
+    replace(o, None)
+}
+
+/// Take a reference and replace the source variable with an empty (default) value.
+///
+/// # Examples
+///
+/// ```
+/// use giftr::refs::{GiftRef, _move};
+/// use giftr::refs::imperative::Ref as Ref;
+/// let mut r = Ref::new(Some(12i8));
+/// let     s = _move(&mut r);
+/// println!("r={:?}", *r); // prints "r=None"
+/// ```
 #[inline]
 pub fn _move<T: Default+Clone, R : GiftRef<T>>(r: &mut R) -> R {
     _replace(r, Default::default())
@@ -36,10 +53,13 @@ pub mod imperative;
 
 pub mod functional;
 
+pub mod dummy;
+
 mod imp_tests {
     use refs::GiftRef;
     use refs::imperative::Ref;
 
+    #[cfg(test)]
     fn print_x(x: i32) {
         println!("x={}", x)
     }
@@ -77,6 +97,6 @@ mod imp_tests {
         println!("r1={}", *r1);
         println!("r2={}", *r2);
         assert!(*r1 == 25);
-        assert!(*r2 == 24); //
+        assert!(*r2 == 24);
     }
 }
