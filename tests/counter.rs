@@ -27,7 +27,7 @@ macro_rules! new_uq {
     ($e:expr) => (FRef::new($e))
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct Counter {
     c: Ref<i32>,
 }
@@ -47,7 +47,7 @@ impl Counter {
 }
 
 #[test]
-fn Counter() {
+fn counter() {
     //// This test will pass for both implementations
     let mut c1 = Ref::new(Counter::new());
     c1.inc();

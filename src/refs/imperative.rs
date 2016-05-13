@@ -1,35 +1,26 @@
 use refs::GiftRef;
 use refs::GiftMutRef;
 use std::ops::{Deref, DerefMut};
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::boxed::Box;
+use std::ptr::drop_in_place;
 
 #[derive(Debug)]
 pub struct Ref<T> {
-    _ptr : Option<Rc<RefCell<T>>>,
+    _ptr : *mut T,
 }
 
 impl <T> Ref<T> {
 
-    pub fn rd_mut(&mut self) -> &mut T {
-        match self._ptr {
-            Some(ref r) => {
-                let p : *mut T = &mut *r.borrow_mut();
-                unsafe { &mut *p }
-            }
-            None => {
-                panic!("null pointer dereference")
-            }
-        }
+    pub fn rd_mut(&self) -> &mut T {
+        unsafe { &mut *self._ptr }
     }
 }
 
 impl <T: Clone> Clone for Ref<T> {
     #[inline]
     fn clone(&self) -> Self {
-        let mut ret : Ref<T> = Ref::null();
-        ret.cp(self);
-        ret
+        let t : T = self.rd().clone();
+        Ref { _ptr: Box::into_raw(Box::new(t)) }
     }
 }
 
@@ -38,59 +29,31 @@ impl <T> GiftRef<T> for Ref<T> where T: Clone {
     type Mut = Ref<T>;
 
     #[inline]
-    fn null() -> Self {
-        Ref { _ptr: None }
-    }
-
-    #[inline]
     fn new(t: T) -> Self {
-        Ref { _ptr: Some(Rc::new(RefCell::new(t))) }
+        Ref { _ptr: Box::into_raw(Box::new(t)) }
     }
 
     fn cp(&mut self, source : &Self) {
-        match source._ptr {
-            Some(ref r) => {
-                self._ptr = Some(Rc::new(RefCell::new(r.borrow().clone())))
-            }
-            None => {
-                self._ptr = None
-            }
-        }
-    }
-
-    fn alias<'a,'b>(&mut self, _x: &'a mut Self, _y: &'b mut Self) {
-        panic!("alias not impl!")
-    }
-
-    #[inline]
-    fn mutable(&mut self) -> Self::Mut {
-        Ref { _ptr: self._ptr.clone() }
+        let cln : T = source.rd().clone();
+        self._ptr = Box::into_raw(Box::new(cln));
     }
 
     fn rd(&self) -> &T {
-        match self._ptr {
-            Some(ref r) => {
-                let p : *const T = &*r.borrow_mut();
-                unsafe { &*p }
-            }
-            None    => panic!("reading null pointer")
-        }
+        self.rd_mut()
     }
 
     fn into_inner(self) -> T {
-        match self {
-            Ref { _ptr: Some(rc) } => {
-                match Rc::try_unwrap(rc) {
-                    Ok(refcell) => refcell.into_inner(),
-                    Err(rc)     => {
-                        panic!("bug: this pointer should be unique")
-                    }
-                }
-            },
-            Ref { _ptr: None    } => panic!("bug")
-        }
+        let Ref { _ptr: ptr } = self;
+        *unsafe { Box::from_raw(ptr) }
     }
 
+}
+
+impl <T> Drop for Ref<T> {
+    fn drop(&mut self) {
+        println!("dropping ptr: {:?}", self._ptr);
+        unsafe { drop_in_place(self._ptr) };
+    }
 }
 
 impl <T:Clone> Deref for Ref<T> {
@@ -101,15 +64,9 @@ impl <T:Clone> Deref for Ref<T> {
     }
 }
 
-impl <'a, T> GiftMutRef<T> for Ref<T> {
+impl <'a, T: Clone> GiftMutRef<T> for Ref<T> {
     fn rd(&mut self) -> &mut T {
-        match self._ptr {
-            Some(ref r) => {
-                let p : *mut T = &mut *r.borrow_mut();
-                unsafe { &mut *p }
-            }
-            None    => panic!("reading null pointer")
-        }
+        self.rd_mut()
     }
 }
 

@@ -1,8 +1,8 @@
 extern crate giftr;
 
 use giftr::refs::*;
-use giftr::refs::functional::Ref as Ref;
-//use giftr::refs::imperative::Ref as Ref;
+//use giftr::refs::functional::Ref as Ref;
+use giftr::refs::imperative::Ref as Ref;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut};
 
@@ -65,8 +65,8 @@ impl <T: Clone+Debug> List<T> {
     }
 
     fn add(&mut self, x:T) {
-        let newFirst = Node { elt: LoudClone::new(x), next: _move(&mut self.first) };
-        self.first = Ref::new(Some(LoudClone::new(newFirst)));
+        let new_first = Node { elt: LoudClone::new(x), next: _move(&mut self.first) };
+        self.first = Ref::new(Some(LoudClone::new(new_first)));
     }
 
     fn replace_first(&mut self, x:T) {
@@ -105,10 +105,9 @@ fn lst_copy() {
     println!("=== LST_COPY ==============");
     let mut lst1 = Ref::new(List::new());
     lst1.add(1);
-    let mut lst2 : Ref<List<i32>> = Ref::null();
     lst1.add(2);
 
-    lst2 = lst1.clone();
+    let lst2 = lst1.clone();
 
     lst1.add(3);
 
