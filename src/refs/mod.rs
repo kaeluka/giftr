@@ -1,26 +1,55 @@
 use std::ops::{Deref, DerefMut};
 use std::mem::replace;
+use std::cell::RefCell;
 
 mod mem;
 
-pub trait GiftRef<T: Clone> : Deref<Target=T> + Clone {
-    type Mut : GiftMutRef<T>;
-    fn new(T) -> Self;
-    fn cp(&mut self, &Self);
-    fn rd(&self) -> &T;
+pub trait GiftRef<T> : Deref<Target=T>+DerefMut {
+    fn new(T) -> Self where Self: Sized;
     fn into_inner(self) -> T;
+
+    fn to_dyn(self) -> DynGiftRef<T>
+        where Self: Sized + 'static
+    {
+        DynGiftRef { _ptr: Box::new(RefCell::new(self)) as Box<RefCell<GiftRef<T, Target=T>>> }
+    }
 }
 
-pub trait GiftMutRef<T> : DerefMut {
-    fn rd(&mut self) -> &mut T;
+pub struct DynGiftRef<T> {
+    _ptr: Box<RefCell<GiftRef<T, Target=T>>>,
+}
+
+impl <T: Clone + 'static> Clone for DynGiftRef<T> {
+    fn clone(&self) -> Self {
+        use refs::functional::Ref;
+        let cln : T = (**self).clone();
+        Ref::new(cln).to_dyn()
+    }
+}
+
+impl <T> Deref for DynGiftRef<T> {
+    type Target = T;
+
+    fn deref<'a>(&'a self) -> &Self::Target {
+        let p : *const T = &**self._ptr.borrow();
+        unsafe { &*p }
+    }
+}
+
+impl <T> DerefMut for DynGiftRef<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        let p : *mut T = &mut **self._ptr.borrow_mut();
+        unsafe { &mut *p }
+    }
 }
 
 #[inline]
-pub fn _replace<T: Clone, R : GiftRef<T>>(r: &mut R, x:T) -> R {
+pub fn _replace<T, R : GiftRef<T>>(r: &mut R, x:T) -> R {
     replace(r, R::new(x))
 }
 
 #[inline]
+#[deprecated]
 pub fn _move_opt<T>(o: &mut Option<T>) -> Option<T> {
     replace(o, None)
 }
@@ -37,13 +66,8 @@ pub fn _move_opt<T>(o: &mut Option<T>) -> Option<T> {
 /// println!("r={:?}", *r); // prints "r=None"
 /// ```
 #[inline]
-pub fn _move<T: Default+Clone, R : GiftRef<T>>(r: &mut R) -> R {
+pub fn _move<T: Default, R : GiftRef<T>>(r: &mut R) -> R {
     _replace(r, Default::default())
-}
-
-#[inline]
-pub fn _copy<T: Default+Clone, R : GiftRef<T>>(r: &R) -> R {
-    r.clone()
 }
 
 pub mod imperative;
@@ -85,7 +109,7 @@ mod imp_tests {
         assert!(*r1 == 12);
         assert!(*r2 == 24);
 
-        r1.cp(&r2);
+        r1 = r2.clone();
 
         assert!(*r1 == 24);
         assert!(*r2 == 24);
@@ -132,7 +156,7 @@ mod fun_tests {
         assert!(*r1 == 12);
         assert!(*r2 == 24);
 
-        r1.cp(&r2);
+        r1 = r2.clone();
 
         assert!(*r1 == 24);
         assert!(*r2 == 24);
@@ -143,5 +167,34 @@ mod fun_tests {
         println!("r2={}", *r2);
         assert!(*r1 == 25);
         assert!(*r2 == 24);
+    }
+}
+
+#[cfg(test)]
+mod dyn_tests {
+
+    use refs::GiftRef;
+    use refs::DynGiftRef;
+    use refs::functional::Ref as FRef;
+    use refs::functional::Ref as IRef;
+
+    #[derive(Clone)]
+    struct Node(Option<DynGiftRef<Node>>);
+
+    fn len(x: &Node) -> i32 {
+        match x {
+            &Node(Some(ref r)) => 1 + len(&*r),
+            &Node(None)        => 1
+        }
+    }
+
+    #[test]
+    fn dynamic() {
+        let n = Node(None);
+        let n = Node(Some(FRef::new(n).to_dyn()));
+        let n = Node(Some(IRef::new(n).to_dyn()));
+        let n = Node(Some(FRef::new(n).to_dyn()));
+
+        assert_eq!(4, len(&n))
     }
 }

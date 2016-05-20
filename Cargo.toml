@@ -7,4 +7,3 @@ authors = ["Stephan Brandauer <stephan.brandauer@it.uu.se>"]
 name = "giftr"
 
 [dependencies]
-refcownt = { path = "../refcownt" }
