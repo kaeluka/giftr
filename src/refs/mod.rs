@@ -2,8 +2,6 @@ use std::ops::{Deref, DerefMut};
 use std::mem::replace;
 use std::cell::RefCell;
 
-mod mem;
-
 pub trait GiftRef<T> : Deref<Target=T>+DerefMut {
     fn new(T) -> Self where Self: Sized;
     fn into_inner(self) -> T;
