@@ -24,4 +24,4 @@ pub trait GiftSpineLocation<T> {
 }
 
 pub mod contiguous;
-pub mod chunked;
+//pub mod chunked;
