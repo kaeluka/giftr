@@ -1,24 +1,32 @@
 use std::iter::Iterator;
 
+//impl <'a, T: Clone, Dir: PartialEq> GiftTreeSpine<'a, Dir> for Ahnentafel<T> {
+//    type Path = i32;
+//}
+
 pub trait GiftSpine<'a> : Default {
-    type T : 'a;
-    type LocIter : Iterator;
-    type Iter    : Iterator<Item=&'a Self::T>;
-    type MutIter : Iterator<Item=&'a mut Self::T>;
+    type T       : 'a;
+    type Loc     : GiftSpineLocation<Self::T> + 'a;
+    type LocMut  : GiftSpineLocationMut<Self::T> + 'a;
+    type Iter    : Iterator<Item=Self::Loc>;
+    type MutIter : Iterator<Item=Self::LocMut>;
 
     fn is_null(&self) -> bool;
     fn add(&mut self, x : Self::T);
     fn pop(&mut self) -> Option<Self::T>;
     fn take(&mut self, n : usize) -> Self;
-    fn take_from(&mut self, n : usize) -> Self;
-    fn at(&'a mut self) -> Self::LocIter;
     fn iter(&'a self) -> Self::Iter;
     fn iter_mut(&'a mut self) -> Self::MutIter;
-
 }
 
 pub trait GiftSpineLocation<T> {
     type Spine;
+    fn node(&self) -> &T;
+}
+
+pub trait GiftSpineLocationMut<T> {
+    type Spine;
+    fn node(&mut self) -> &mut T;
     fn insert(&mut self, x: T);
     fn take_rest(&mut self) -> Self::Spine;
 }

@@ -6,7 +6,8 @@ use std::vec::*;
 use std::cell::UnsafeCell;
 use std::marker::PhantomData;
 use std::fmt::{Debug, Formatter, Result};
-use ispine::{GiftSpine, GiftSpineLocation};
+use spine::{GiftSpine, GiftSpineLocation, GiftSpineLocationMut};
+use std::ops::{Index, IndexMut};
 
 pub struct Contiguous<T> {
     data : UnsafeCell<Vec<T>>,
@@ -39,10 +40,11 @@ impl <T> Contiguous<T> {
 }
 
 impl <'a, T : 'a> GiftSpine<'a> for Contiguous<T> {
-    type T = T;
-    type LocIter = ContiguousLocationIter<'a, T>;
-    type Iter = ContiguousIter<'a, T>;
-    type MutIter = ContiguousIterMut<'a, Self::T>;
+    type T       = T;
+    type Loc     = ContiguousLocation<'a, T>;
+    type LocMut  = ContiguousLocationMut<'a, T>;
+    type Iter    = ContiguousLocationIter<'a, T>;
+    type MutIter = ContiguousLocationIterMut<'a, Self::T>;
 
     #[inline(always)]
     fn is_null(&self) -> bool {
@@ -65,23 +67,18 @@ impl <'a, T : 'a> GiftSpine<'a> for Contiguous<T> {
         Contiguous { data: tmp }
     }
 
-    fn take_from(&mut self, n : usize) -> Contiguous<T> {
-        Contiguous { data: UnsafeCell::new(self.data_mut().split_off(n)) }
+    fn iter(&'a self) -> ContiguousLocationIter<'a, T> {
+        ContiguousLocationIter { root: self,
+                                 idx: 0,
+                                 len: self.data().len(),
+                                 _x: PhantomData }
     }
 
-    fn at(&'a mut self) -> ContiguousLocationIter<'a, T> {
-        ContiguousLocationIter { root : self,
-                             idx  : 0,
-                             len  : self.data().len(),
-                             _x   : PhantomData }
-    }
-
-    fn iter(&'a self) -> ContiguousIter<'a, T> {
-        ContiguousIter { it: self.data().iter() }
-    }
-
-    fn iter_mut(&'a mut self) -> ContiguousIterMut<'a, T> {
-        ContiguousIterMut { it: self.data_mut().iter_mut() }
+    fn iter_mut(&'a mut self) -> ContiguousLocationIterMut<'a, T> {
+        ContiguousLocationIterMut { root: self,
+                                    idx: 0,
+                                    len: self.data().len(),
+                                    _x: PhantomData }
     }
 
 }
@@ -89,24 +86,23 @@ impl <'a, T : 'a> GiftSpine<'a> for Contiguous<T> {
 ////////////////////////////////////////////////////////////
 
 pub struct ContiguousLocationIter<'a, T: 'a> {
-    root : *mut Contiguous<T>,
+    root : *const Contiguous<T>,
     idx  : usize,
     len  : usize,
     _x: PhantomData<&'a T>,
 }
 
 pub struct ContiguousLocation<'a, T: 'a> {
-    root : *mut Contiguous<T>,
+    root : *const Contiguous<T>,
     idx  : usize,
     _x   : PhantomData<&'a T>,
 }
 
 impl <'a, T: 'a> ContiguousLocation<'a, T> {
     #[inline(always)]
-    fn root_mut(&mut self) ->&mut  Contiguous<T> {
-        unsafe { &mut *self.root }
+    fn root(&self) -> &Contiguous<T> {
+        unsafe { &*self.root }
     }
-
 }
 
 impl <'a, T: 'a> Iterator for ContiguousLocationIter<'a, T> {
@@ -166,6 +162,97 @@ impl <'a, T: 'a> Iterator for ContiguousLocationIter<'a, T> {
 
 impl <'a, T: 'a> GiftSpineLocation<T> for ContiguousLocation<'a, T> {
     type Spine = Contiguous<T>;
+    fn node(&self) -> &T {
+        self.root().data().index(self.idx)
+    }
+}
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+pub struct ContiguousLocationIterMut<'a, T: 'a> {
+    root : *mut Contiguous<T>,
+    idx  : usize,
+    len  : usize,
+    _x: PhantomData<&'a T>,
+}
+
+pub struct ContiguousLocationMut<'a, T: 'a> {
+    root : *mut Contiguous<T>,
+    idx  : usize,
+    _x   : PhantomData<&'a T>,
+}
+
+impl <'a, T: 'a> ContiguousLocationMut<'a, T> {
+    #[inline(always)]
+    fn root_mut(&mut self) -> &mut  Contiguous<T> {
+        unsafe { &mut *self.root }
+    }
+}
+
+impl <'a, T: 'a> Iterator for ContiguousLocationIterMut<'a, T> {
+    type Item = ContiguousLocationMut<'a, T>;
+
+    fn next(&mut self) -> Option<ContiguousLocationMut<'a, T>> {
+        let self_idx = self.idx;
+        let self_len = self.len; //self.root().data().len();
+        if self_idx < self_len {
+            let ret = ContiguousLocationMut {
+                root: self.root,
+                idx : self.idx,
+                _x  : PhantomData,
+            };
+            self.idx += 1;
+            Some(ret)
+        } else {
+            None
+        }
+    }
+
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        if self.idx < self.len {
+            Some(ContiguousLocationMut {
+                root : self.root,
+                idx  : self.idx+n,
+                _x   : PhantomData,
+            })
+        } else {
+            None
+        }
+    }
+
+    fn last(self) -> Option<Self::Item> {
+        if self.idx < self.len {
+            Some(ContiguousLocationMut {
+                root : self.root,
+                idx  : self.len-1,
+                _x   : PhantomData
+            })
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let rem = self.len - self.idx - 1;
+        (rem, Some(rem))
+    }
+
+    fn count(self) -> usize {
+        self.len - self.idx - 1
+    }
+
+}
+
+
+impl <'a, T: 'a> GiftSpineLocationMut<T> for ContiguousLocationMut<'a, T> {
+    type Spine = Contiguous<T>;
+
+    fn node(&mut self) -> &mut T {
+        let self_idx = self.idx;
+        self.root_mut().data_mut().index_mut(self_idx)
+    }
 
     fn insert(&mut self, x: T) {
         let self_idx = self.idx;
@@ -174,7 +261,8 @@ impl <'a, T: 'a> GiftSpineLocation<T> for ContiguousLocation<'a, T> {
 
     fn take_rest(&mut self) -> Contiguous<T> {
         let self_idx = self.idx;
-        self.root_mut().take_from(self_idx)
+        let rest = UnsafeCell::new(self.root_mut().data_mut().split_off(self_idx));
+        Contiguous { data: rest }
     }
 }
 
