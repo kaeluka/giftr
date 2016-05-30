@@ -6,7 +6,7 @@ use std::ptr::drop_in_place;
 
 #[derive(Debug)]
 pub struct Ref<T> {
-    _ptr : *mut T,
+    pub _ptr : *mut T, //Public for the purpose of implementing `Drop`
 }
 
 impl <T> Ref<T> {
@@ -35,7 +35,15 @@ impl <T> GiftRef<T> for Ref<T> where T: Clone {
         Ref { _ptr: Box::into_raw(Box::new(t)) }
     }
 
-    fn into_inner(self) -> T {
+    fn apply<F: FnOnce(T) -> T>(&mut self, f: F)
+        where Self: Sized
+    {
+        let b = unsafe { Box::from_raw(self._ptr) };
+        self._ptr = Box::into_raw(Box::new( f(*b) ))
+
+    }
+
+    fn consume(self) -> T {
         let Ref { _ptr: ptr } = self;
         *unsafe { Box::from_raw(ptr) }
     }

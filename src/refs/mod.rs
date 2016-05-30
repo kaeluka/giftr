@@ -4,7 +4,10 @@ use std::cell::RefCell;
 
 pub trait GiftRef<T> : Deref<Target=T>+DerefMut {
     fn new(T) -> Self where Self: Sized;
-    fn into_inner(self) -> T;
+    fn consume(self) -> T;
+
+    fn apply<F: FnOnce(T) -> T>(&mut self, F)
+        where Self: Sized;
 
     fn to_dyn(self) -> DynGiftRef<T>
         where Self: Sized + 'static

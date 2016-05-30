@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 #[derive(Debug)]
 pub struct Ref<T> {
-    pub _ptr : Rc<T>,
+    pub _ptr : Rc<T>, //public for the purpose of implementing `Drop`
 }
 
 impl <T> Ref<T> {
@@ -20,7 +20,14 @@ impl <'c, T: Clone> GiftRef<T> for Ref<T> {
         Ref { _ptr: Rc::new(t) }
     }
 
-    fn into_inner(self) -> T {
+    fn apply<F: FnOnce(T) -> T>(&mut self, f: F)
+        where Self: Sized
+    {
+        let x = self.clone().consume();
+        self._ptr = Rc::new(f(x));
+    }
+
+    fn consume(self) -> T {
         match Rc::try_unwrap(self._ptr) {
             Ok(x) => x,
             Err(_ptr) => (*_ptr).clone()
