@@ -26,7 +26,7 @@ impl <T: Clone> Clone for Contiguous<T> {
     }
 }
 
-impl <T> Contiguous<T> {
+impl <T: Debug> Contiguous<T> {
     #[inline(always)]
     fn data(&self) -> &Vec<T> {
         unsafe { &*self.data.get() }
@@ -39,17 +39,12 @@ impl <T> Contiguous<T> {
 
 }
 
-impl <'a, T : 'a> GiftSpine<'a> for Contiguous<T> {
+impl <'a, T : 'a + Debug> GiftSpine<'a> for Contiguous<T> {
     type T       = T;
     type Loc     = ContiguousLocation<'a, T>;
     type LocMut  = ContiguousLocationMut<'a, T>;
     type Iter    = ContiguousLocationIter<'a, T>;
     type MutIter = ContiguousLocationIterMut<'a, Self::T>;
-
-    #[inline(always)]
-    fn is_null(&self) -> bool {
-        self.data().len() == 0
-    }
 
     #[inline(always)]
     fn add(&mut self, x : T) {
@@ -58,7 +53,11 @@ impl <'a, T : 'a> GiftSpine<'a> for Contiguous<T> {
 
     #[inline(always)]
     fn pop(&mut self) -> Option<T> {
-        self.data_mut().pop()
+        if self.data().len() > 0 {
+            Some(self.data_mut().remove(0))
+        } else {
+            None
+        }
     }
 
     fn take(&mut self, n : usize) -> Contiguous<T> {
@@ -110,8 +109,8 @@ impl <'a, T: 'a> Iterator for ContiguousLocationIter<'a, T> {
 
     fn next(&mut self) -> Option<ContiguousLocation<'a, T>> {
         let self_idx = self.idx;
-        let self_len = self.len; //self.root().data().len();
-        if self_idx < self_len {
+        let self_len = self.len;
+        if self_idx <= self_len {
             let ret = ContiguousLocation {
                 root: self.root,
                 idx : self.idx,
@@ -125,7 +124,7 @@ impl <'a, T: 'a> Iterator for ContiguousLocationIter<'a, T> {
     }
 
     fn nth(&mut self, n: usize) -> Option<Self::Item> {
-        if self.idx < self.len {
+        if self.idx <= self.len {
             Some(ContiguousLocation {
                 root : self.root,
                 idx  : self.idx+n,
@@ -137,7 +136,7 @@ impl <'a, T: 'a> Iterator for ContiguousLocationIter<'a, T> {
     }
 
     fn last(self) -> Option<Self::Item> {
-        if self.idx < self.len {
+        if self.idx <= self.len {
             Some(ContiguousLocation {
                 root : self.root,
                 idx  : self.len-1,
@@ -154,14 +153,20 @@ impl <'a, T: 'a> Iterator for ContiguousLocationIter<'a, T> {
     }
 
     fn count(self) -> usize {
-        self.len - self.idx - 1
+        self.len - self.idx
     }
 
 }
 
 
-impl <'a, T: 'a> GiftSpineLocation<T> for ContiguousLocation<'a, T> {
+impl <'a, T: 'a + Debug> GiftSpineLocation<T> for ContiguousLocation<'a, T> {
     type Spine = Contiguous<T>;
+
+    #[inline(always)]
+    fn is_null(&self) -> bool {
+        self.root().data().len() == 0
+    }
+
     fn node(&self) -> &T {
         self.root().data().index(self.idx)
     }
@@ -178,20 +183,25 @@ pub struct ContiguousLocationIterMut<'a, T: 'a> {
     _x: PhantomData<&'a T>,
 }
 
-pub struct ContiguousLocationMut<'a, T: 'a> {
+pub struct ContiguousLocationMut<'a, T: 'a + Debug> {
     root : *mut Contiguous<T>,
     idx  : usize,
     _x   : PhantomData<&'a T>,
 }
 
-impl <'a, T: 'a> ContiguousLocationMut<'a, T> {
+impl <'a, T: 'a + Debug> ContiguousLocationMut<'a, T> {
+    #[inline(always)]
+    fn root(&self) -> &Contiguous<T> {
+        unsafe { &mut *self.root }
+    }
+
     #[inline(always)]
     fn root_mut(&mut self) -> &mut  Contiguous<T> {
         unsafe { &mut *self.root }
     }
 }
 
-impl <'a, T: 'a> Iterator for ContiguousLocationIterMut<'a, T> {
+impl <'a, T: 'a + Debug> Iterator for ContiguousLocationIterMut<'a, T> {
     type Item = ContiguousLocationMut<'a, T>;
 
     fn next(&mut self) -> Option<ContiguousLocationMut<'a, T>> {
@@ -246,8 +256,13 @@ impl <'a, T: 'a> Iterator for ContiguousLocationIterMut<'a, T> {
 }
 
 
-impl <'a, T: 'a> GiftSpineLocationMut<T> for ContiguousLocationMut<'a, T> {
+impl <'a, T: 'a + Debug> GiftSpineLocationMut<T> for ContiguousLocationMut<'a, T> {
     type Spine = Contiguous<T>;
+
+    #[inline(always)]
+    fn is_null(&self) -> bool {
+        self.root().data().len() == 0
+    }
 
     fn node(&mut self) -> &mut T {
         let self_idx = self.idx;
@@ -256,10 +271,10 @@ impl <'a, T: 'a> GiftSpineLocationMut<T> for ContiguousLocationMut<'a, T> {
 
     fn insert(&mut self, x: T) {
         let self_idx = self.idx;
-        self.root_mut().data_mut().insert(self_idx+1, x)
+        self.root_mut().data_mut().insert(self_idx+1, x);
     }
 
-    fn take_rest(&mut self) -> Contiguous<T> {
+    fn take(&mut self) -> Contiguous<T> {
         let self_idx = self.idx;
         let rest = UnsafeCell::new(self.root_mut().data_mut().split_off(self_idx));
         Contiguous { data: rest }

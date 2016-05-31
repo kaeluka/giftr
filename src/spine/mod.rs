@@ -11,9 +11,8 @@ pub trait GiftSpine<'a> : Default {
     type Iter    : Iterator<Item=Self::Loc>;
     type MutIter : Iterator<Item=Self::LocMut>;
 
-    fn is_null(&self) -> bool;
-    fn add(&mut self, x : Self::T);
-    fn pop(&mut self) -> Option<Self::T>;
+    fn add(&mut self, x : Self::T);        // would need a Dir
+    fn pop(&mut self) -> Option<Self::T>;  // would need a Dir
     fn take(&mut self, n : usize) -> Self;
     fn iter(&'a self) -> Self::Iter;
     fn iter_mut(&'a mut self) -> Self::MutIter;
@@ -22,13 +21,15 @@ pub trait GiftSpine<'a> : Default {
 pub trait GiftSpineLocation<T> {
     type Spine;
     fn node(&self) -> &T;
+    fn is_null(&self) -> bool;             // would need a Dir
 }
 
 pub trait GiftSpineLocationMut<T> {
     type Spine;
     fn node(&mut self) -> &mut T;
-    fn insert(&mut self, x: T);
-    fn take_rest(&mut self) -> Self::Spine;
+    fn is_null(&self) -> bool;             // would need a Dir
+    fn insert(&mut self, x: T);            // would need a Dir
+    fn take(&mut self) -> Self::Spine;
 }
 
 pub mod contiguous;
