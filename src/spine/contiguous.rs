@@ -256,8 +256,20 @@ impl <'a, T: 'a + Debug> Iterator for ContiguousLocationIterMut<'a, T> {
 }
 
 
-impl <'a, T: 'a + Debug> GiftSpineLocationMut<T> for ContiguousLocationMut<'a, T> {
+impl <'a, T: 'a + Debug> GiftSpineLocation<T> for ContiguousLocationMut<'a, T> {
     type Spine = Contiguous<T>;
+
+    #[inline(always)]
+    fn is_null(&self) -> bool {
+        self.root().data().len() == 0
+    }
+
+    fn node(&self) -> &T {
+        self.root().data().index(self.idx)
+    }
+}
+
+impl <'a, T: 'a + Debug> GiftSpineLocationMut<T> for ContiguousLocationMut<'a, T> {
 
     #[inline(always)]
     fn is_null(&self) -> bool {

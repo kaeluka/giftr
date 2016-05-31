@@ -24,8 +24,7 @@ pub trait GiftSpineLocation<T> {
     fn is_null(&self) -> bool;             // would need a Dir
 }
 
-pub trait GiftSpineLocationMut<T> {
-    type Spine;
+pub trait GiftSpineLocationMut<T> : GiftSpineLocation<T> {
     fn node(&mut self) -> &mut T;
     fn is_null(&self) -> bool;             // would need a Dir
     fn insert(&mut self, x: T);            // would need a Dir
